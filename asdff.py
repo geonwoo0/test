@@ -88,26 +88,24 @@ def generation():
     #ret, img = cap.read()
     #cap1 = process_image(img)
     #iterating = True
-    if data == b"0":
-        while 1:
-            cap = cv2.VideoCapture(0)
-            _, frame = cap.read()
-            
-            
-            frame, count = process_image(frame)
-            obj_count = 0
-            for i in count.values():
-                obj_count += i
-            if obj_count == 9:
-                ser.write(b"1")
-            else:
-                ser.write(b"1")
-            yield frame
+    while data == b"0":
+        cap = cv2.VideoCapture(0)
+        _, frame = cap.read()
+        
+        
+        frame, count = process_image(frame)
+        obj_count = 0
+        for i in count.values():
+            obj_count += i
+        if obj_count == 9:
+            ser.write(b"1")
+        else:
+            ser.write(b"1")
+        yield frame
 
-    elif data == b"1":
-        while 1:
-            _, frame = cap.read()
-            yield frame
+    while data == b"1":
+        _, frame = cap.read()
+        yield frame
         
 
 with gr.Blocks() as demo:
