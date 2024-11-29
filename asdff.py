@@ -7,6 +7,7 @@ import numpy as np
 from PIL import Image
 from requests.auth import HTTPBasicAuth
 import serial
+import time
 
 ser = serial.Serial("/dev/ttyACM0", 9600)
 #VISION_API_URL = "https://suite-endpoint-api-apne2.superb-ai.com/endpoints/80451a40-16a1-4506-9084-783c033421f3/inference"
@@ -83,23 +84,30 @@ def process_image(image):
 
 def generation():    
     cap = cv2.VideoCapture(0)
+    data = ser.read()
     #ret, img = cap.read()
     #cap1 = process_image(img)
     #iterating = True
-    while 1:
-        data = ser.read()
-        _, frame = cap.read()
-        frame, count = process_image(frame)
-        if data == b"0":
+    if data == b"0":
+        while 1:
+            cap = cv2.VideoCapture(0)
+            _, frame = cap.read()
+            
+            
+            frame, count = process_image(frame)
             obj_count = 0
             for i in count.values():
                 obj_count += i
             if obj_count == 9:
                 ser.write(b"1")
             else:
-                cv2.waitKey(0)
                 ser.write(b"1")
-        yield frame
+            yield frame
+
+    elif data == b"1":
+        while 1:
+            _, frame = cap.read()
+            yield frame
         
 
 with gr.Blocks() as demo:
