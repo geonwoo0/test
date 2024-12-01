@@ -8,10 +8,15 @@ from PIL import Image
 from requests.auth import HTTPBasicAuth
 import serial
 import time
+import sqlite3
+import uuid
+from datetime import datetime
 
 ser = serial.Serial("/dev/ttyACM0", 9600)
 VISION_API_URL = "http://192.168.10.13:8883/inference/run"
 
+conn = sqlite3.connect('check_pi.db')
+cursor = conn.cursor()
 
 def request_image(image):
     image = np.array(image)
@@ -88,16 +93,37 @@ def generation():
 
     while 1:
         _, frame = cap.read()
-        data = ser.read()
+        
         img_obj = request_image(frame)
         obj_cnt = len(img_obj)
 
         if obj_cnt >= 1:
             frame = process_image(img_obj,frame)
             yield frame
-
+            
+            data = ser.read()
             if data == b"0" and obj_cnt == 9:
+                datetime_value = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                uuid_value = str(uuid.uuid4())
+                is_defective = 0
+                defect_reason = "정상"
+                #이미지 경로 수정
+                cv2.imwrite(f"{uuid_value}{defect_reason}.jpg",frame)
+                image_path = f"{uuid_value}{defect_reason}.jpg"
+                insert_data(datetime_value,uuid_value,is_defective,defect_reason,image_path)
+
                 ser.write(b"1")
+            elif data == b"0" and obj_cnt < 9:
+                datetime_value = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                uuid_value = str(uuid.uuid4())
+                is_defective = 1
+                defect_reason = "불량"
+                #이미지 경로 수정
+                cv2.imwrite(f"{uuid_value}{defect_reason}",frame)
+                image_path = f"{uuid_value}{defect_reason}"
+                insert_data(datetime_value,uuid_value,is_defective,defect_reason,image_path)
+                return frame
+
             else:
                 pass
         else:
@@ -105,6 +131,14 @@ def generation():
 
 def reset_process():
     ser.write(b"1")
+
+def insert_data(datetime_value, uuid_value, is_defective, defect_reason=None,img_path):
+    insert_query = '''
+    INSERT INTO 제품 (datetime, uuid, is_defective, defect_reason, image_path)
+    VALUES (?, ?, ?, ?, ?)
+    '''
+    cursor.execute(insert_query, (datetime_value, uuid_value, is_defective, defect_reason,img_path))
+    conn.commit()
 
 with gr.Blocks() as demo:
     output_video = gr.Video(label="Video Stream")
