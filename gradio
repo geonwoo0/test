@@ -30,6 +30,7 @@ def request_image(image):
         url = VISION_API_URL,
         files = files
     )
+
     print("상태:",response.status_code)
     img_obj = response.json()["objects"]
     return img_obj
@@ -68,11 +69,11 @@ def process_image(img_obj,frame):
             color = (30,60,90)
 
         a1,a2,b1,b2 = bbox
-        cv2.rectangle(image, (int(a1),int(a2)), (int(b1),int(b2)), color = color, 2)
+        cv2.rectangle(image, (int(a1),int(a2)), (int(b1),int(b2)), color = color)
 
         text = f"{cls_name}: {float(confidence):.2f}"
 
-        cv2.putText(image, text, (int(a1), int(a2) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color = color, 2)
+        cv2.putText(image, text, (int(a1), int(a2) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color = color)
     print("box 생성")
     k=30
     for j in img_cnt:
@@ -87,11 +88,12 @@ def process_image(img_obj,frame):
 
 def generation():
     cap = cv2.VideoCapture(0)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)  # 프레임 폭 줄이기
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)  # 프레임 높이 줄이기
-    cap.set(cv2.CAP_PROP_FPS, 15)  # 초당 프레임 수 제한
+    #cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)  # 프레임 폭 줄이기
+    #cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)  # 프레임 높이 줄이기
+    cap.set(cv2.CAP_PROP_FPS, 10)  # 초당 프레임 수 제한
 
     while 1:
+        time.sleep(0.3)
         _, frame = cap.read()
         
         img_obj = request_image(frame)
@@ -110,7 +112,7 @@ def generation():
                 #이미지 경로 수정
                 cv2.imwrite(f"{uuid_value}{defect_reason}.jpg",frame)
                 image_path = f"{uuid_value}{defect_reason}.jpg"
-                insert_data(datetime_value,uuid_value,is_defective,defect_reason,image_path)
+                insert_data(datetime_value,uuid_value,is_defective,image_path,defect_reason)
 
                 ser.write(b"1")
             elif data == b"0" and obj_cnt < 9:
@@ -119,9 +121,9 @@ def generation():
                 is_defective = 1
                 defect_reason = "불량"
                 #이미지 경로 수정
-                cv2.imwrite(f"{uuid_value}{defect_reason}",frame)
-                image_path = f"{uuid_value}{defect_reason}"
-                insert_data(datetime_value,uuid_value,is_defective,defect_reason,image_path)
+                cv2.imwrite(f"{uuid_value}{defect_reason}.jpg",frame)
+                image_path = f"{uuid_value}{defect_reason}.jpg"
+                insert_data(datetime_value,uuid_value,is_defective,image_path,defect_reason)
                 return frame
 
             else:
@@ -132,7 +134,7 @@ def generation():
 def reset_process():
     ser.write(b"1")
 
-def insert_data(datetime_value, uuid_value, is_defective, defect_reason=None,img_path):
+def insert_data(datetime_value, uuid_value, is_defective,img_path, defect_reason=None):
     insert_query = '''
     INSERT INTO 제품 (datetime, uuid, is_defective, defect_reason, image_path)
     VALUES (?, ?, ?, ?, ?)
