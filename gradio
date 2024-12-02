@@ -148,10 +148,6 @@ with gr.Blocks() as demo:
     button2 = gr.Button("reset",variant = "primary")
     button2.click(fn=reset_process, inputs=None, outputs=None, queue=False)
     button2.click(fn=generation, inputs=None, outputs=output_video, queue=True)
-    output_video.stream(
-        fn=generation, inputs=None, outputs=[output_video],
-        trigger=button.click
-    )
-
+    button.click(fn=generation, inputs=None, outputs=output_video, queue=True)
 if __name__ == "__main__":
     demo.launch()
